@@ -1,6 +1,6 @@
 package main
 
 func main() {
-	server := NewAPIServer(":8080")
-	server.Run();
+	server := NewAPIServer(":443", "./certs/cert.pem", "./certs/key.pem")
+	server.Run()
 }

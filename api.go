@@ -3,16 +3,21 @@ package main
 import (
 	"log"
 	"net/http"
+	"os"
 )
 
 // Types
 type APIServer struct {
 	address string
+	cert    string
+	key     string
 }
 
-func NewAPIServer(hostAndPort string) *APIServer {
+func NewAPIServer(hostAndPort string, cert string, key string) *APIServer {
 	return &APIServer{
 		address: hostAndPort,
+		cert:    cert,
+		key:     key,
 	}
 }
 
@@ -33,13 +38,26 @@ func (httpServer *APIServer) Run() error {
 	proxyRouter := http.NewServeMux()
 	proxyRouter.Handle("/api/v1/", http.StripPrefix("/api/v1", router))
 
+	host := httpServer.address
+	noTLS := os.Getenv("NO_TLS") == "true"
+
+	if noTLS {
+		host = ":8080"
+	}
+
 	server := http.Server{
-		Addr:    httpServer.address,
+		Addr:    host,
 		Handler: midlewareChained(proxyRouter),
 	}
 
-	log.Printf("Sever has stated %s", httpServer.address)
+	if noTLS {
+		log.Printf("*** Serve starting without TLS ***")
+		log.Printf("Sever has stated %s", host)
+		return server.ListenAndServe()
+	}
+
+	log.Printf("Sever has stated %s", host)
 
 	// Init server,create some keys to use TLS
-	return server.ListenAndServe()
+	return server.ListenAndServeTLS(httpServer.cert, httpServer.key)
 }
